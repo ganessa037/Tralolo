@@ -23,12 +23,13 @@ Tralolo is an interactive Streamlit app that lets you upload your own CSV data a
 1. Clone this repository or copy `main.py` to your project folder.
 2. Install dependencies:
    ```powershell
-   pip install streamlit pandas requests
+   pip install -r requirements.txt
    ```
-3. Download and run [Ollama](https://ollama.com/) locally, and pull a model (e.g., `codellama`):
+3. Download and run [Ollama](https://ollama.com/) locally, and pull a model (e.g., `codellama` or any other supported model):
    ```powershell
    ollama run codellama
    ```
+   Or, to use a different model, replace `codellama` with your preferred model name (e.g., `ollama run llama3`).
    Make sure Ollama is running at `http://localhost:11434` (default).
 
 ## Usage
