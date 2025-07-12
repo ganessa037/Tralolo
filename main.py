@@ -4,16 +4,16 @@ import pandas as pd
 from langchain_groq import ChatGroq
 
 # --- Set up Groq API key ---
-os.environ["GROQ_API_KEY"] = "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"  # 🔁 Replace with your real key
+os.environ["GROQ_API_KEY"] = "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"  # Replace with your actual key
 
-# --- Initialize ChatGroq model ---
+# --- Initialize Groq model ---
 llm = ChatGroq(
-    model_name="llama3-70b-8192",  # ✅ Valid model
+    model_name="llama3-70b-8192",
     temperature=0.2,
     max_retries=2
 )
 
-# --- Page Setup ---
+# --- Set up Streamlit page ---
 st.set_page_config(page_title="AskMyData AI", layout="wide")
 
 # --- Patch missing imports helper ---
@@ -28,55 +28,78 @@ def patch_missing_imports(code):
     return patched
 
 # --- Initialize session state ---
-for key in ["df", "recent_questions", "full_code", "in_app_code",
-            "filename", "explanation", "suggested_questions", "question_input"]:
+defaults = {
+    "df": None,
+    "filename": "",
+    "recent_questions": [],
+    "suggested_questions": [],
+    "question_input": "",
+    "full_code": "",
+    "in_app_code": "",
+    "explanation": ""
+}
+for key, val in defaults.items():
     if key not in st.session_state:
-        if key == "df":
-            st.session_state[key] = None
-        elif "questions" in key:
-            st.session_state[key] = []
-        else:
-            st.session_state[key] = ""
+        st.session_state[key] = val
 
-# --- Sidebar for upload ---
+# --- SIDEBAR: New Chat + Previous Questions ---
 with st.sidebar:
-    st.title("📊 Data Assistant")
-    uploaded_file = st.file_uploader("Upload your CSV file here", type="csv")
+    st.title("🧠 AskMyData AI")
+    if st.button("🆕 New Chat"):
+        for key in defaults:
+            st.session_state[key] = defaults[key]
+        st.rerun()
+
+    st.markdown("### 📜 Chat History")
+    if st.session_state.recent_questions:
+        for i, q in enumerate(st.session_state.recent_questions):
+            if st.button(q, key=f"history-{i}"):
+                st.session_state.question_input = q
+                st.rerun()
+    else:
+        st.info("No previous chats yet.")
+
+# --- MAIN CONTENT AREA ---
+st.markdown("<h1 style='text-align: center;'>Welcome to your Data Assistant</h1>", unsafe_allow_html=True)
+
+# --- Upload CSV in center ---
+if st.session_state.df is None:
+    st.markdown("### 📁 Upload a CSV file to get started", unsafe_allow_html=True)
+    uploaded_file = st.file_uploader("Upload CSV", type="csv", label_visibility="collapsed")
     if uploaded_file:
         st.session_state.filename = uploaded_file.name
         st.session_state.df = pd.read_csv(uploaded_file)
         st.success(f"✅ {uploaded_file.name} uploaded!")
+        st.rerun()
+else:
+    st.success(f"✅ Working with: {st.session_state.filename}")
 
-# --- Main UI ---
-st.markdown("<h1>Welcome to your Data Assistant!</h1>", unsafe_allow_html=True)
-st.write("Ask questions about your data — I'll generate Python code and explain it!")
+    # --- Suggested Questions Button ---
+    if st.button("✨ Try Asking (AI Suggestions)"):
+        cols = ", ".join(st.session_state.df.columns)
+        prompt = f"Suggest 5 analytical questions for dataset columns: {cols}"
+        try:
+            res = llm.invoke(prompt).content
+            st.session_state.suggested_questions = [s.strip().lstrip("–-") for s in res.splitlines() if s.strip()]
+        except Exception as e:
+            st.error(f"Suggestion error: {e}")
 
-# --- Suggest questions ---
-if st.session_state.df is not None and st.button("✨ Try Asking (AI Suggestions)"):
-    cols = ", ".join(st.session_state.df.columns)
-    prompt = f"Suggest 5 analytical questions for dataset columns: {cols}"
-    try:
-        res = llm.invoke(prompt).content  # ✅ FIXED
-        st.session_state.suggested_questions = [s.strip().lstrip("–-") for s in res.splitlines() if s.strip()]
-    except Exception as e:
-        st.error(f"Suggestion error: {e}")
+    # --- Show Suggestions ---
+    if st.session_state.suggested_questions:
+        st.markdown("#### 💡 Suggested Questions")
+        for s in st.session_state.suggested_questions:
+            if st.button(s, key=f"suggest-{s}"):
+                st.session_state.question_input = s
+                st.rerun()
 
-# --- Show suggestions ---
-if st.session_state.suggested_questions:
-    st.markdown("#### 💡 Suggestions:")
-    for s in st.session_state.suggested_questions:
-        if st.button(s, key=s):
-            st.session_state.question_input = s
-
-# --- Ask & generate code ---
-if st.session_state.df is not None:
+    # --- Ask Question & Educational Mode ---
     st.divider()
     edu_mode = st.radio("🎓 Educational Mode", ["Just Code", "Explain for Beginners"], horizontal=True)
-    question = st.text_input("💬 Ask your question:", value=st.session_state.question_input or "")
+    question = st.text_input("💬 Ask your question:", value=st.session_state.question_input)
 
     if st.button("🔍 Submit"):
-        if not question:
-            st.warning("Ask something!")
+        if not question.strip():
+            st.warning("Please enter a question.")
         else:
             st.session_state.recent_questions = [question] + st.session_state.recent_questions[:4]
             explain_flag = ("and add beginner-friendly comments" if edu_mode.startswith("Explain")
@@ -93,7 +116,7 @@ You are a helpful data scientist.
 # In-App Version
 """
             try:
-                res = llm.invoke(prompt).content  # ✅ FIXED
+                res = llm.invoke(prompt).content
                 if "# In-App Version" in res:
                     parts = res.split("# In-App Version")
                     full, in_app = parts[0].replace("# Standalone Code", "").strip(), parts[1].strip()
@@ -107,47 +130,37 @@ You are a helpful data scientist.
             except Exception as e:
                 st.error(f"Code generation error: {e}")
 
-# --- Display outputs ---
-if st.session_state.full_code:
-    st.markdown("### 🧪 Full Script")
-    st.code(st.session_state.full_code, "python")
+    # --- Show Generated Code ---
+    if st.session_state.full_code:
+        st.markdown("### 🧪 Full Script")
+        st.code(st.session_state.full_code, "python")
 
-if st.session_state.in_app_code:
-    st.markdown("### ⚙️ In-App Code")
-    st.code(st.session_state.in_app_code, "python")
-    if st.button("▶️ Run In-App Code"):
-        local = {"df": st.session_state.df.copy()}
-        try:
-            exec(st.session_state.in_app_code, {}, local)
-            if "result" in local:
-                res = local["result"]
-                if isinstance(res, pd.DataFrame):
-                    st.dataframe(res)
+    if st.session_state.in_app_code:
+        st.markdown("### ⚙️ In-App Code")
+        st.code(st.session_state.in_app_code, "python")
+        if st.button("▶️ Run In-App Code"):
+            local = {"df": st.session_state.df.copy()}
+            try:
+                exec(st.session_state.in_app_code, {}, local)
+                if "result" in local:
+                    result = local["result"]
+                    if isinstance(result, pd.DataFrame):
+                        st.dataframe(result)
+                    else:
+                        st.write(result)
                 else:
-                    st.write(res)
-            else:
-                st.warning("No result variable found.")
-        except Exception as e:
-            st.error(f"Run error: {e}")
+                    st.warning("No result variable found.")
+            except Exception as e:
+                st.error(f"Run error: {e}")
 
-# --- Explain code block ---
-if st.session_state.in_app_code:
-    if st.button("🔎 Explain Code"):
-        try:
-            prompt = f"Explain this Python pandas code line‑by‑line:\n{st.session_state.in_app_code}"
-            st.session_state.explanation = llm.invoke(prompt).content  # ✅ FIXED
-        except Exception as e:
-            st.error(f"Explain error: {e}")
-    if st.session_state.explanation:
-        st.markdown("### 💡 Explanation")
-        st.markdown(st.session_state.explanation)
-
-# --- Recent questions ---
-if st.session_state.recent_questions:
-    st.markdown("### 📌 Recent Questions")
-    for i, q in enumerate(st.session_state.recent_questions):
-        cols = st.columns([8, 1])
-        cols[0].write(f"- {q}")
-        if cols[1].button("❌", key=f"delete-{i}"):
-            st.session_state.recent_questions.pop(i)
-            st.experimental_rerun()
+    # --- Explain the Code ---
+    if st.session_state.in_app_code:
+        if st.button("🔎 Explain Code"):
+            try:
+                prompt = f"Explain this Python pandas code line‑by‑line:\n{st.session_state.in_app_code}"
+                st.session_state.explanation = llm.invoke(prompt).content
+            except Exception as e:
+                st.error(f"Explain error: {e}")
+        if st.session_state.explanation:
+            st.markdown("### 💡 Explanation")
+            st.markdown(st.session_state.explanation)
