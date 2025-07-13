@@ -1,17 +1,7 @@
 import os
 import streamlit as st
 import pandas as pd
-from langchain_groq import ChatGroq
-
-# --- Set up Groq API key ---
-os.environ["GROQ_API_KEY"] = "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"  # 🔁 Replace with your real key
-
-# --- Initialize ChatGroq model ---
-llm = ChatGroq(
-    model_name="llama3-70b-8192",  # ✅ Valid model
-    temperature=0.2,
-    max_retries=2
-)
+from llm_config import llm  # Import the LLM configuration
 
 # --- Page Setup ---
 st.set_page_config(page_title="AskMyData AI", layout="wide")
