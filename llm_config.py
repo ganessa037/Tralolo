@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
-from main_utils import strip_lines
+from utils.formats import strip_lines
 from langchain.chat_models import ChatOpenAI
 
 from utils.prompt_template import PromptTemplate
