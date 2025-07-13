@@ -51,7 +51,6 @@ class ExecutionHandler:
 
             if "result" in local:
                 st.success("✅ Code ran successfully.")
-                st.write("**Result:**", local["result"])
 
         except Exception as e:
             st.error(f"Run error: {e}")

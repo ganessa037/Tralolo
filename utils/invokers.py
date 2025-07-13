@@ -41,8 +41,13 @@ class AIActionInvoker:
             with st.spinner("🤖 Generating code..."):
                 res = AIActionInvoker.call_llm_groq(prompt)
                 AIResponseFormatHandler.prep_code(res)
-                mistral_review = AIActionInvoker.call_llm_mistral(state.get_full_code, state.get_columns_as_list())
+
+                mistral_review = AIActionInvoker.call_llm_mistral(
+                    state.get_full_code(), 
+                    state.get_columns_as_list()
+                )
                 state.set_in_app_code(mistral_review)
+                print(state.get_in_app_code())
                 
         except Exception as e:
             st.error(f"Code generation error: {e}")

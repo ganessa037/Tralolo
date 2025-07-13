@@ -52,7 +52,7 @@ def ask_llm_groq(prompt: str) -> list[str]:
 
 def review_code_with_mistral(code: str, dataset_columns: list[str]) -> str:
     cols_str = ", ".join(dataset_columns)
-    review_prompt = PromptTemplate.CODE_GENERATION.value.format(
+    review_prompt = PromptTemplate.REVIEW_CODE.value.format(
         cols_str=cols_str,
         code = code,
     )
