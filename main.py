@@ -1,13 +1,12 @@
-import os
 import streamlit as st
 import pandas as pd
-from llm_config import llm  # Import the LLM configuration
+from llm_config import ask_llm, llm
 from utils import patch_missing_imports
 
 # --- Page Setup ---
 st.set_page_config(page_title="AskMyData AI", layout="wide")
 
-# --- Initialize session state ---
+# --- Initialize session state, to save the states for rerun ---
 for key in ["df", "recent_questions", "full_code", "in_app_code",
             "filename", "explanation", "suggested_questions", "question_input"]:
     if key not in st.session_state:
@@ -31,21 +30,26 @@ with st.sidebar:
 st.markdown("<h1>Welcome to your Data Assistant!</h1>", unsafe_allow_html=True)
 st.write("Ask questions about your data — I'll generate Python code and explain it!")
 
+# --- Show uploaded data ---
+if st.session_state.get("df") is not None:
+    st.dataframe(st.session_state.df.head(10))
+
 # --- Suggest questions ---
 if st.session_state.df is not None and st.button("✨ Try Asking (AI Suggestions)"):
     cols = ", ".join(st.session_state.df.columns)
-    prompt = f"Suggest 5 analytical questions for dataset columns: {cols}"
+    prompt = (
+        f"List only 5 analytical questions based on these dataset columns: {cols}. "
+        f"Output only the questions in plain bullet points. Do not include any introductory or concluding sentence."
+    )
     try:
-        res = llm.invoke(prompt).content  # ✅ FIXED
-        st.session_state.suggested_questions = [s.strip().lstrip("–-") for s in res.splitlines() if s.strip()]
+        st.session_state.suggested_questions = ask_llm(prompt)
     except Exception as e:
         st.error(f"Suggestion error: {e}")
 
 # --- Show suggestions ---
-if st.session_state.suggested_questions:
-    st.markdown("#### 💡 Suggestions:")
-    for s in st.session_state.suggested_questions:
-        if st.button(s, key=s):
+for i, s in enumerate(st.session_state.suggested_questions):
+    if s.strip():  # skip empty or blank entries
+        if st.button(s, key=f"suggestion_{i}"):
             st.session_state.question_input = s
 
 # --- Ask & generate code ---
@@ -64,36 +68,57 @@ if st.session_state.df is not None:
             cols = ", ".join(st.session_state.df.columns)
             filename = st.session_state.filename
 
-            prompt = f"""
-You are a helpful data scientist.
-1. Write a standalone script loading '{filename}', using [{cols}], and answer: "{question}" {explain_flag}
-   Store result in `result`. Use Streamlit for plots.
-2. Then give a short in-app version assuming `df` is loaded.
-# Standalone Code
-# In-App Version
-"""
+            prompt = (
+                f"You are a coding assistant. Return only valid Python code — no markdown, no text, and no explanations.\n\n"
+                f"Write two code outputs:\n\n"
+                f"1. # Standalone Code\n"
+                f"Only include the logic needed to answer the following question based on the file '{filename}' using columns [{cols}]:\n"
+                f"\"{question}\"\n"
+                f"{explain_flag}\n"
+                f"Do not include file loading, Streamlit layout, or UI code. Use Streamlit for plotting if needed. "
+                f"Store the final result in a variable named 'result'.\n\n"
+                f"2. # In-App Version\n"
+                f"Write a full Streamlit script that:\n"
+                f"- Loads the file '{filename}'\n"
+                f"- Uses the columns [{cols}]\n"
+                f"- Answers the same question: \"{question}\"\n"
+                f"- Displays a chart\n"
+                f"- Stores the final result in a variable called 'result'\n\n"
+                f"Use clear and explicit variable and function names.\n"
+                f"Do not include any comments, markdown formatting (like ```), or explanations. Return pure code only."
+            )
+
             try:
-                res = llm.invoke(prompt).content  # ✅ FIXED
-                if "# In-App Version" in res:
-                    parts = res.split("# In-App Version")
-                    full, in_app = parts[0].replace("# Standalone Code", "").strip(), parts[1].strip()
+                res = ask_llm(prompt)
+                if isinstance(res, list):
+                    res = "\n".join(res)
+
+                normalized = res.replace("**In-App Version**", "# In-App Version").replace("**Standalone Code**", "# Standalone Code")
+
+                if "# In-App Version" in normalized:
+                    parts = normalized.split("# In-App Version")
+                    full = parts[0].replace("# Standalone Code", "").strip()
+                    in_app = parts[1].strip()
                 else:
-                    full, in_app = res.strip(), res.strip()
+                    full = in_app = normalized.strip()
+
                 full = full.replace("data.csv", filename)
                 in_app = in_app.replace("plt.show()", "st.pyplot(plt.gcf())")
+                in_app = in_app.replace("@st.cache", "@st.cache_data")
                 st.session_state.full_code = full
                 st.session_state.in_app_code = patch_missing_imports(in_app)
                 st.session_state.explanation = ""
+                
             except Exception as e:
                 st.error(f"Code generation error: {e}")
 
 # --- Display outputs ---
 if st.session_state.full_code:
-    st.markdown("### 🧪 Full Script")
+    st.markdown("### 🧪 Standalone Code (for integration)")
     st.code(st.session_state.full_code, "python")
 
 if st.session_state.in_app_code:
-    st.markdown("### ⚙️ In-App Code")
+    st.markdown("### ⚙️ Full Script")
     st.code(st.session_state.in_app_code, "python")
     if st.button("▶️ Run In-App Code"):
         local = {"df": st.session_state.df.copy()}
@@ -106,7 +131,7 @@ if st.session_state.in_app_code:
                 else:
                     st.write(res)
             else:
-                st.warning("No result variable found.")
+                st.warning("idk why hmm")
         except Exception as e:
             st.error(f"Run error: {e}")
 
