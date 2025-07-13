@@ -1,9 +1,11 @@
 import re
 import streamlit as st
 from .prompt_template import PromptTemplate
-from .sessions import get_columns, get_filename, get_columns_as_list
+from .sessions import SessionState
 from main_utils import patch_missing_imports
 from llm_config import ask_llm_groq, review_code_with_mistral ,llm_groq
+
+state = SessionState()
 
 class AIActionInvoker:
 
@@ -18,10 +20,10 @@ class AIActionInvoker:
     @staticmethod
     def get_questions_suggestions():
         prompt = PromptTemplate.SUGGEST_QUESTIONS.value.format(
-            cols=get_columns(),
+            cols=state.get_columns(),
         )
         try:
-            st.session_state.suggested_questions = AIActionInvoker.call_llm_groq(prompt)
+            state.set_suggested_questions(AIActionInvoker.call_llm_groq(prompt))
         except Exception as e:
             st.error(f"Suggestion error: {e}")
 
@@ -31,16 +33,16 @@ class AIActionInvoker:
 
         prompt = PromptTemplate.CODE_GENERATION.value.format(
             question=question,
-            filename=get_filename(),
-            cols=get_columns(),
+            filename=state.get_filename(),
+            cols=state.get_columns(),
         )
 
         try:
             with st.spinner("🤖 Generating code..."):
                 res = AIActionInvoker.call_llm_groq(prompt)
                 AIResponseFormatHandler.prep_code(res)
-                mistral_review = AIActionInvoker.call_llm_mistral(st.session_state.full_code, get_columns_as_list())
-                st.session_state.in_app_code = mistral_review
+                mistral_review = AIActionInvoker.call_llm_mistral(state.get_full_code, state.get_columns_as_list())
+                state.set_in_app_code(mistral_review)
                 
         except Exception as e:
             st.error(f"Code generation error: {e}")
@@ -48,7 +50,7 @@ class AIActionInvoker:
 class AIResponseFormatHandler:
 
     @staticmethod
-    def prep_code(res, filename=get_filename()):
+    def prep_code(res, filename=state.get_filename()):
         if isinstance(res, list):
             res = AIResponseFormatHandler.join_lines(res)
 
@@ -68,9 +70,9 @@ class AIResponseFormatHandler:
         in_app = re.sub(r'@st\.cache\b', '@st.cache_data', in_app)
 
         # ✅ Save
-        st.session_state.full_code = full
-        st.session_state.in_app_code = in_app
-        st.session_state.explanation = ""
+        state.set_full_code(full)
+        state.set_in_app_code(in_app)
+        state.set_explanation("")
 
     def code_normalizer(res: str) -> str:
         return (re.sub(r'^\*\*(In-App Version(?: \(Streamlit\))?|Standalone Code)\*\*', 

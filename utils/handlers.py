@@ -5,8 +5,10 @@ import numpy as np
 import streamlit as st
 import pandas as pd
 import seaborn as sns
-from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
+from .sessions import SessionState
+
+state = SessionState()
 
 # --- nltk setup, ensure that its downloaded when needed, need to debug later ---
 nltk.download('punkt')
@@ -18,14 +20,14 @@ class FileHandler:
             st.title("📊 Data Assistant")
             uploaded_file = st.file_uploader("Upload your CSV file here", type="csv")
             if uploaded_file:
-                st.session_state.filename = uploaded_file.name
-                st.session_state.df = pd.read_csv(uploaded_file)
+                state.set_filename(uploaded_file.name)
+                state.set_df(pd.read_csv(uploaded_file))
                 st.success(f"✅ {uploaded_file.name} uploaded!")
 
 class ExecutionHandler: 
     def execute_code(in_app):
         local = {
-            "df": st.session_state.df.copy(),
+            "df": state.get_df().copy(),
             "pd": pd,
             "np": np,
             "plt": plt,
