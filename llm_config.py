@@ -4,6 +4,8 @@ from langchain_groq import ChatGroq
 from main_utils import strip_lines
 from langchain.chat_models import ChatOpenAI
 
+from utils.prompt_template import PromptTemplate
+
 load_dotenv()
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -21,7 +23,7 @@ llm_mistral = ChatOpenAI(
     temperature=0.2,
     max_retries=2,
     openai_api_key=os.getenv("MISTRAL_API_KEY"),
-    openai_api_base="https://api.mistral.ai/v1",
+    openai_api_base=os.getenv("OPENAI_API_BASE")
 )
 
 def clean_llm_output(text: str) -> str:
@@ -50,24 +52,14 @@ def ask_llm_groq(prompt: str) -> list[str]:
 
 def review_code_with_mistral(code: str, dataset_columns: list[str]) -> str:
     cols_str = ", ".join(dataset_columns)
-    review_prompt = f"""
-        You are a Python expert. Please review and revise the following code.
+    review_prompt = PromptTemplate.CODE_GENERATION.value.format(
+        cols_str=cols_str,
+        code = code,
+    )
 
-        Your tasks:
-        1. Check for any syntax or logic errors.
-        2. Verify that the column names used match the actual dataset columns: [{cols_str}].
-        3. If any column names are incorrect or unclear, correct them using the provided column names.
-        4. Apply improvements based on Python and data analysis best practices.
-        5. Ensure the code is clean, professional, and safe to execute.
-        6. Do not explain — just return the revised, executable Python code.
-        7. Do not define a data loading function; use `df = df.copy()` directly to access the dataset.
-        8. Replace any `plt.show()` with `st.pyplot(plt.gcf())` for Streamlit compatibility if there's any.
-        Code:
-        {code}
-        """
     try:
         response = llm_mistral.invoke(review_prompt)
         return clean_llm_output(response.content)
     except Exception as e:
-        return f"❌ Mistral error: {e}"
+        return f"Mistral error: {e}"
     
