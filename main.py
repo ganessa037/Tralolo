@@ -1,8 +1,18 @@
 import re
+from matplotlib import pyplot as plt
+import nltk
+import numpy as np
 import streamlit as st
 import pandas as pd
-from llm_config import ask_llm, llm
+import seaborn as sns
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from llm_config import ask_llm_groq, review_code_with_mistral ,llm_groq
 from utils import patch_missing_imports
+import warnings
+
+nltk.download('punkt')
+nltk.download('stopwords')
 
 # --- Page Setup ---
 st.set_page_config(page_title="AskMyData AI", layout="wide")
@@ -43,7 +53,7 @@ if st.session_state.df is not None and st.button("✨ Try Asking (AI Suggestions
         f"Output only the questions in plain bullet points. Do not include any introductory or concluding sentence."
     )
     try:
-        st.session_state.suggested_questions = ask_llm(prompt)
+        st.session_state.suggested_questions = ask_llm_groq(prompt)
     except Exception as e:
         st.error(f"Suggestion error: {e}")
 
@@ -76,33 +86,26 @@ if st.session_state.df is not None:
 
                 1. # Standalone Code
                 - Write clean logic to answer: "{question}" using the file '{filename}' and columns [{cols}]
-                - Use only libraries that are common: pandas, numpy, matplotlib, seaborn, sklearn, nltk
-                - Always download NLTK data if needed (e.g., 'punkt', 'stopwords')
-                - Store the final output in a variable named `result`
+                - Use only common libraries: pandas, numpy, matplotlib, seaborn, sklearn, nltk
+                - Always assign the final output (e.g., result DataFrame, numeric value, or message string) to a variable named `result`
+                - If displaying a chart or message only, assign `result = "Chart displayed"` or similar
 
                 2. # In-App Version
-                - Create a full Streamlit script
-                - Use the columns [{cols}]
+                - Same as above, but format as a full Streamlit script
                 - Use `st.pyplot()` instead of `plt.show()`
                 - If using `word_tokenize` or `stopwords`, include:
-                    ```python
                     import nltk
                     nltk.download('punkt')
                     nltk.download('stopwords')
-                    ```
-                - Convert datetime columns before doing datetime math
-                - Do not assume file loading — just use a variable `df.copy()`
-                - Store the final output in a variable called `result`
-
-                Do NOT include markdown, explanations, or comments. Only return valid runnable code.
+                - Always assign something meaningful to `result`
                 """
 
             try:
-                res = ask_llm(prompt)
+                res = ask_llm_groq(prompt)
                 if isinstance(res, list):
                     res = "\n".join(res)
 
-                normalized = res.replace("**In-App Version**", "# In-App Version").replace("**Standalone Code**", "# Standalone Code")
+                normalized = res.replace("**In-App Version (Streamlit)**", "# In-App Version").replace("**Standalone Code**", "# Standalone Code").replace("**In-App Version**", "# In-App Version")
 
                 if "# In-App Version" in normalized:
                     parts = normalized.split("# In-App Version")
@@ -117,6 +120,10 @@ if st.session_state.df is not None:
                 st.session_state.full_code = full
                 st.session_state.in_app_code = patch_missing_imports(in_app)
                 st.session_state.explanation = ""
+                with st.spinner("🤖 Mistral is reviewing your code..."):
+                    print("Reviewing code with Mistral...")
+                    mistral_review = review_code_with_mistral(st.session_state.in_app_code, st.session_state.df.columns.tolist())
+                    st.session_state.in_app_code = mistral_review
                 
             except Exception as e:
                 st.error(f"Code generation error: {e}")
@@ -128,31 +135,36 @@ if st.session_state.full_code:
 
 if st.session_state.in_app_code:
     st.markdown("### ⚙️ Full Script")
-    # st.code(st.session_state.in_app_code, "python")
     in_app = st.session_state.in_app_code
     in_app = re.sub(r'pd\.read_csv\s*\((?:[^)(]+|\([^)]*\))*\)', "df.copy()", in_app)
-
+    in_app = re.sub(r'df\s*=\s*pd\.DataFrame\s*\(\s*\)', "df = df.copy()", in_app)
+    in_app = re.sub(r'set\s*\(\s*stopwords_words\s*\)', "stopwords_words", in_app)
     st.code(in_app, "python")
     
     if st.button("▶️ Run In-App Code"):
-        
+        local = {
+            "df": st.session_state.df.copy(),
+            "pd": pd,
+            "np": np,
+            "plt": plt,
+            "sns": sns,
+            "nltk": nltk,
+            "st": st,
+            "word_tokenize": word_tokenize,
+            "stopwords": stopwords,
+            "stopwords_words": list(stopwords.words("english")),  # ✅ FIXED
+            "__builtins__": __builtins__,
+        }
 
-        local = {"df": st.session_state.df.copy()}
         try:
-            exec(in_app, {}, local)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=DeprecationWarning)  # 👈 Ignore only deprecation warnings
+                exec(in_app, local, local)
+                
             func_candidates = [v for v in local.values() if callable(v)]
             if len(func_candidates) == 1:
                 func_candidates[0]()  # attempt to run the single defined function
 
-            # Look for a 'result' object
-            if "result" in local:
-                res = local["result"]
-                if isinstance(res, pd.DataFrame):
-                    st.dataframe(res)
-                else:
-                    st.write(res)
-            else:
-                st.warning("✅ Code ran, but no 'result' variable found to display.")
         except Exception as e:
             st.error(f"Run error: {e}")
 
@@ -161,7 +173,7 @@ if st.session_state.in_app_code:
     if st.button("🔎 Explain Code"):
         try:
             prompt = f"Explain this Python pandas code line‑by‑line:\n{st.session_state.in_app_code}"
-            st.session_state.explanation = llm.invoke(prompt).content  # ✅ FIXED
+            st.session_state.explanation = llm_groq.invoke(prompt).content  # ✅ FIXED
         except Exception as e:
             st.error(f"Explain error: {e}")
     if st.session_state.explanation:
