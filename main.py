@@ -1,3 +1,4 @@
+import re
 import streamlit as st
 import pandas as pd
 from llm_config import ask_llm, llm
@@ -68,25 +69,33 @@ if st.session_state.df is not None:
             cols = ", ".join(st.session_state.df.columns)
             filename = st.session_state.filename
 
-            prompt = (
-                f"You are a coding assistant. Return only valid Python code — no markdown, no text, and no explanations.\n\n"
-                f"Write two code outputs:\n\n"
-                f"1. # Standalone Code\n"
-                f"Only include the logic needed to answer the following question based on the file '{filename}' using columns [{cols}]:\n"
-                f"\"{question}\"\n"
-                f"{explain_flag}\n"
-                f"Do not include file loading, Streamlit layout, or UI code. Use Streamlit for plotting if needed. "
-                f"Store the final result in a variable named 'result'.\n\n"
-                f"2. # In-App Version\n"
-                f"Write a full Streamlit script that:\n"
-                f"- Loads the file '{filename}'\n"
-                f"- Uses the columns [{cols}]\n"
-                f"- Answers the same question: \"{question}\"\n"
-                f"- Displays a chart\n"
-                f"- Stores the final result in a variable called 'result'\n\n"
-                f"Use clear and explicit variable and function names.\n"
-                f"Do not include any comments, markdown formatting (like ```), or explanations. Return pure code only."
-            )
+            prompt = f"""
+                You are a Python coding assistant. Return only valid Python code — no markdown, no explanations.
+
+                Write two code outputs:
+
+                1. # Standalone Code
+                - Write clean logic to answer: "{question}" using the file '{filename}' and columns [{cols}]
+                - Use only libraries that are common: pandas, numpy, matplotlib, seaborn, sklearn, nltk
+                - Always download NLTK data if needed (e.g., 'punkt', 'stopwords')
+                - Store the final output in a variable named `result`
+
+                2. # In-App Version
+                - Create a full Streamlit script
+                - Use the columns [{cols}]
+                - Use `st.pyplot()` instead of `plt.show()`
+                - If using `word_tokenize` or `stopwords`, include:
+                    ```python
+                    import nltk
+                    nltk.download('punkt')
+                    nltk.download('stopwords')
+                    ```
+                - Convert datetime columns before doing datetime math
+                - Do not assume file loading — just use a variable `df.copy()`
+                - Store the final output in a variable called `result`
+
+                Do NOT include markdown, explanations, or comments. Only return valid runnable code.
+                """
 
             try:
                 res = ask_llm(prompt)
@@ -119,11 +128,23 @@ if st.session_state.full_code:
 
 if st.session_state.in_app_code:
     st.markdown("### ⚙️ Full Script")
-    st.code(st.session_state.in_app_code, "python")
+    # st.code(st.session_state.in_app_code, "python")
+    in_app = st.session_state.in_app_code
+    in_app = re.sub(r'pd\.read_csv\s*\((?:[^)(]+|\([^)]*\))*\)', "df.copy()", in_app)
+
+    st.code(in_app, "python")
+    
     if st.button("▶️ Run In-App Code"):
+        
+
         local = {"df": st.session_state.df.copy()}
         try:
-            exec(st.session_state.in_app_code, {}, local)
+            exec(in_app, {}, local)
+            func_candidates = [v for v in local.values() if callable(v)]
+            if len(func_candidates) == 1:
+                func_candidates[0]()  # attempt to run the single defined function
+
+            # Look for a 'result' object
             if "result" in local:
                 res = local["result"]
                 if isinstance(res, pd.DataFrame):
@@ -131,7 +152,7 @@ if st.session_state.in_app_code:
                 else:
                     st.write(res)
             else:
-                st.warning("idk why hmm")
+                st.warning("✅ Code ran, but no 'result' variable found to display.")
         except Exception as e:
             st.error(f"Run error: {e}")
 
