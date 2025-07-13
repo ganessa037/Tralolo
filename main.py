@@ -2,20 +2,10 @@ import os
 import streamlit as st
 import pandas as pd
 from llm_config import llm  # Import the LLM configuration
+from utils import patch_missing_imports
 
 # --- Page Setup ---
 st.set_page_config(page_title="AskMyData AI", layout="wide")
-
-# --- Patch missing imports helper ---
-def patch_missing_imports(code):
-    patched = code
-    if "sns." in code and "import seaborn" not in code:
-        patched = "import seaborn as sns\n" + patched
-    if "datetime" in code and "import datetime" not in code and "from datetime" not in code:
-        patched = "from datetime import datetime\n" + patched
-    if "np." in code and "import numpy" not in code:
-        patched = "import numpy as np\n" + patched
-    return patched
 
 # --- Initialize session state ---
 for key in ["df", "recent_questions", "full_code", "in_app_code",
