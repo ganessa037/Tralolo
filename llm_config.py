@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
-from utils import strip_lines
+from main_utils import strip_lines
 from langchain.chat_models import ChatOpenAI
 
 load_dotenv()
@@ -61,7 +61,7 @@ def review_code_with_mistral(code: str, dataset_columns: list[str]) -> str:
         5. Ensure the code is clean, professional, and safe to execute.
         6. Do not explain — just return the revised, executable Python code.
         7. Do not define a data loading function; use `df = df.copy()` directly to access the dataset.
-
+        8. Replace any `plt.show()` with `st.pyplot(plt.gcf())` for Streamlit compatibility if there's any.
         Code:
         {code}
         """
@@ -70,3 +70,4 @@ def review_code_with_mistral(code: str, dataset_columns: list[str]) -> str:
         return clean_llm_output(response.content)
     except Exception as e:
         return f"❌ Mistral error: {e}"
+    
