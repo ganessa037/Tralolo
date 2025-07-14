@@ -10,6 +10,7 @@ def patch_missing_imports(code):
         code = "import pandas as pd\n" + code
     if "np." in code and "import numpy" not in code:
         patched = "import numpy as np\n" + patched
+    
     return patched
 
 def strip_lines(text):
