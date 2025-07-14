@@ -1,6 +1,9 @@
 # main.py
 import re
 import streamlit as st
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
 from llm_config import llm_groq
 from utils.sessions import SessionState
 from utils.handlers import FileHandler, ExecutionHandler
@@ -44,6 +47,7 @@ if state.get_df() is not None:
         if not question:
             st.warning("Ask something!")
         else:
+            state.set_question_input(question) 
             state.add_recent_question(question)
             AIActionInvoker.generate_code(question, mode)
 
@@ -73,6 +77,78 @@ if state.get_in_app_code() != "":
     if state.get_explanation():
         st.markdown("### 💡 Explanation")
         st.markdown(state.get_explanation())
+        
+        
+
+# --- Helper: Detect column types ---
+def get_column_types(df):
+    numerical = df.select_dtypes(include=['number']).columns.tolist()
+    categorical = df.select_dtypes(include=['object', 'category', 'bool']).columns.tolist()
+    datetime = df.select_dtypes(include=['datetime64', 'datetime']).columns.tolist()
+    return numerical, categorical, datetime
+
+# --- AI-Driven Visualization Based on User Question ---
+if state.get_df() is not None:
+    st.divider()
+    st.markdown("### :bar_chart: Custom Visualization")
+
+    df = state.get_df().copy()
+
+    chart_type = st.selectbox("Select chart type", [
+        "Histogram", "Bar Chart", "Line Chart", "Scatter Plot", "Heatmap"])
+
+    question_for_plot = state.get_question_input()
+
+    st.markdown(f"Using your question: **{question_for_plot}**")
+
+    if st.button(":bar_chart: Generate Visualization"):
+
+        columns_list = df.columns.tolist()
+
+        vis_prompt = f"""
+        You are a helpful Python assistant that creates data visualizations using matplotlib or seaborn in Streamlit.
+
+        The user asked: '{question_for_plot}'
+        They selected: '{chart_type}'
+
+        Here are the available DataFrame columns: {columns_list}
+
+        Instructions:
+        - Do NOT combine numerical columns into strings (e.g., avoid 'rpm-torque' keys)
+        - Use numeric columns as-is for axes, especially when analyzing correlations
+        - If question implies correlation, use a seaborn.heatmap on a correlation matrix (df.corr())
+        - If the question is about counts by category, group appropriately using groupby
+        - Automatically select appropriate columns for x and y based on the question
+        - Create the chart using this structure:
+
+            fig, ax = plt.subplots()
+            # your charting code here using ax
+            st.pyplot(fig)
+
+        - Do NOT include print statements, comments, or explanations
+        - Assume df = df.copy() is already defined
+        """
+
+
+
+
+        try:
+            vis_code = llm_groq.invoke(vis_prompt).content
+            if isinstance(vis_code, list):
+                vis_code = "\n".join(vis_code)
+
+            vis_code = re.sub(r"```(?:python)?", "", vis_code).strip("`")
+            vis_code = re.sub(r"\bst\.pyplot\s*\(\s*\)", "st.pyplot(fig)", vis_code)
+            if "fig, ax = plt.subplots()" not in vis_code:
+                vis_code = "fig, ax = plt.subplots()\n" + vis_code
+
+            local = {"df": df.copy(), "st": st, "plt": plt, "sns": sns, "pd": pd}
+
+            with st.spinner("Generating chart..."):
+                exec(vis_code, {}, local)
+
+        except Exception as e:
+            st.error(f"Visualization error: {e}")
 
 # --- Recent questions ---
 if state.get_recent_questions() != []:
