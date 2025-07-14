@@ -50,12 +50,18 @@ def ask_llm_groq(prompt: str) -> list[str]:
     cleaned_text = clean_llm_output(response.content)
     return strip_lines(cleaned_text) 
 
-def review_code_with_mistral(code: str, dataset_columns: list[str]) -> str:
+def review_code_with_mistral(code: str, dataset_columns: list[str], language: str ) -> str:
     cols_str = ", ".join(dataset_columns)
-    review_prompt = PromptTemplate.REVIEW_CODE.value.format(
-        cols_str=cols_str,
-        code = code,
-    )
+    if language == "Python":
+        review_prompt = PromptTemplate.Python_REVIEW_CODE.value.format(
+            cols_str=cols_str,
+            code=code
+        )
+    else:
+        review_prompt = PromptTemplate.SQL_REVIEW_CODE.value.format(
+            cols_str=cols_str,
+            code=code
+        )
 
     try:
         response = llm_mistral.invoke(review_prompt)

@@ -14,8 +14,8 @@ class AIActionInvoker:
         return ask_llm_groq(prompt)
     
     @staticmethod
-    def call_llm_mistral(code: str, dataset_columns: list[str]) -> str:
-        return review_code_with_mistral(code, dataset_columns)
+    def call_llm_mistral(code: str, dataset_columns: list[str], language: str = "Python") -> str:
+        return review_code_with_mistral(code, dataset_columns, language)
 
     @staticmethod
     def get_questions_suggestions():
@@ -28,13 +28,19 @@ class AIActionInvoker:
             st.error(f"Suggestion error: {e}")
 
     @staticmethod
-    def generate_code(question:str, mode:str):
+    def generate_code(question:str, mode:str, language:str):
         # explain_flag = ("and add beginner-friendly comments" if mode.startswith("Explain") else "and keep it concise and professional.")
-
-        prompt = PromptTemplate.CODE_GENERATION.value.format(
-            question=question,
-            filename=state.get_filename(),
-            cols=state.get_columns(),
+        if language == "Python":
+            prompt = PromptTemplate.Python_CODE_GENERATION.value.format(
+                question=question,
+                filename=state.get_filename(),
+                cols=state.get_columns(),
+            )
+        else:
+            prompt = PromptTemplate.SQL_CODE_GENERATION.value.format(
+                question=question,
+                filename=state.get_filename(),
+                cols=state.get_columns(),
         )
 
         try:
@@ -44,7 +50,8 @@ class AIActionInvoker:
 
                 mistral_review = AIActionInvoker.call_llm_mistral(
                     state.get_full_code(), 
-                    state.get_columns_as_list()
+                    state.get_columns_as_list(),
+                    language=language
                 )
                 state.set_in_app_code(mistral_review)
                 print(state.get_in_app_code())
@@ -69,7 +76,9 @@ class AIResponseFormatHandler:
             full = in_app = normalized.strip()
 
         # ✅ Replacements
+        st.write("📎 Filename:", repr(state.get_filename()))
         full = full.replace("data.csv", filename)
+        st.write("📎 Filename:", repr(full))
         in_app = patch_missing_imports(in_app)
         in_app = re.sub(r'plt\s*\.\s*show\s*\(\s*\)', 'st.pyplot(plt.gcf())', in_app)
         in_app = re.sub(r'@st\.cache\b', '@st.cache_data', in_app)

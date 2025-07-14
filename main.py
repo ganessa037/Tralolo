@@ -25,6 +25,11 @@ st.write("Ask questions about your data — I'll generate Python code and explai
 if state.get_df() is not None:
     st.dataframe(state.get_df().head(10))
 
+    # Global SQLite connection object (I don't know where to put this, so I put it here)
+    if "sqlite_conn" not in st.session_state:
+        st.session_state.sqlite_conn = None
+
+
     # --- Suggest questions ---
     if st.button("✨ Try Asking (AI Suggestions)"):
         AIActionInvoker.get_questions_suggestions()
@@ -39,13 +44,14 @@ if state.get_df() is not None:
     st.divider()
     mode = st.radio("🎓 Educational Mode", ["Just Code", "Explain for Beginners"], horizontal=True)
     question = st.text_input("💬 Ask your question:", value=state.get_question_input() or "")
+    language = st.radio("🗣️ Language", ["Python", "SQL"], horizontal=True)
 
     if st.button("🔍 Submit"):
         if not question:
             st.warning("Ask something!")
         else:
             state.add_recent_question(question)
-            AIActionInvoker.generate_code(question, mode)
+            AIActionInvoker.generate_code(question, mode, language)
 
 # --- Display outputs ---
 if state.get_full_code() != "":
@@ -61,11 +67,14 @@ if state.get_in_app_code() != "":
     st.code(in_app, "python")
     
     if st.button("▶️ Run In-App Code"):
-        ExecutionHandler.execute_code(in_app)
+        ExecutionHandler.execute_code(in_app, language)
 
     if st.button("🔎 Explain Code"):
         try:
-            prompt = f"Explain this Python pandas code line‑by‑line:\n{in_app}"
+            if language == "Python":
+                prompt = f"Explain this Python pandas code line‑by‑line:\n{in_app}"
+            else:
+                prompt = f"Explain this SQL code line‑by‑line:\n{in_app}"
             state.set_explanation(llm_groq.invoke(prompt).content)
         except Exception as e:
             st.error(f"Explain error: {e}")

@@ -7,6 +7,7 @@ import pandas as pd
 import seaborn as sns
 from nltk.corpus import stopwords
 from .sessions import SessionState
+import duckdb
 
 state = SessionState()
 
@@ -25,32 +26,56 @@ class FileHandler:
                 st.success(f"✅ {uploaded_file.name} uploaded!")
 
 class ExecutionHandler: 
-    def execute_code(in_app):
-        local = {
-            "df": state.get_df().copy(),
-            "pd": pd,
-            "np": np,
-            "plt": plt,
-            "sns": sns,
-            "nltk": nltk,
-            "st": st,
-            # "word_tokenize": word_tokenize,
-            "stopwords": stopwords,
-            "stopwords_words": list(stopwords.words("english")),
-            "__builtins__": __builtins__,
-        }
+    def execute_code(in_app,language):
+        if language == "SQL":
+            try:
+                # Get the DataFrame and original filename
+                df = state.get_df()
+                filename = state.get_filename() 
+                table_name = filename.replace(".csv", "").replace(" ", "_")  # sanitize table name
 
-        try:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", category=DeprecationWarning)
-                exec(in_app, local, local)
+                # Connect and register table with original file name (no .csv)
+                conn = duckdb.connect()
+                conn.register(table_name, df)
 
-            func_candidates = [v for v in local.values() if callable(v)]
-            if len(func_candidates) == 1:
-                func_candidates[0]()
+                # Execute the query
+                query = in_app.strip()
+                result_df = conn.execute(query).fetchdf()
 
-            if "result" in local:
-                st.success("✅ Code ran successfully.")
+                st.dataframe(result_df)
+                st.success("✅ SQL query ran successfully.")
+                conn.close()
+            except Exception as e:
+                st.error(f"SQL run error: {e}")
+        else:
+            local = {
+                "df": state.get_df().copy(),
+                "pd": pd,
+                "np": np,
+                "plt": plt,
+                "sns": sns,
+                "nltk": nltk,
+                "st": st,
+                # "word_tokenize": word_tokenize,
+                "stopwords": stopwords,
+                "stopwords_words": list(stopwords.words("english")),
+                "__builtins__": __builtins__,
+            }
 
-        except Exception as e:
-            st.error(f"Run error: {e}")
+            try:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=DeprecationWarning)
+                    exec(in_app, local, local)
+
+                func_candidates = [v for v in local.values() if callable(v)]
+                if len(func_candidates) == 1:
+                    func_candidates[0]()
+
+                if "result" in local:
+                    st.success("✅ Code ran successfully.")
+
+            except Exception as e:
+                st.error(f"Run error: {e}")
+
+
+
