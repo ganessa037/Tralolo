@@ -76,8 +76,9 @@ class AIResponseFormatHandler:
             full = in_app = normalized.strip()
 
         # ✅ Replacements
+        # the 2 st.write is just to debug
         st.write("📎 Filename:", repr(state.get_filename()))
-        full = full.replace("data.csv", filename)
+        #full = full.replace("data.csv", filename)
         st.write("📎 Filename:", repr(full))
         in_app = patch_missing_imports(in_app)
         in_app = re.sub(r'plt\s*\.\s*show\s*\(\s*\)', 'st.pyplot(plt.gcf())', in_app)
