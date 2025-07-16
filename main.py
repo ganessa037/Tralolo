@@ -117,6 +117,7 @@ if state.get_df() is not None:
         - Do NOT combine numerical columns into strings (e.g., avoid 'rpm-torque' keys)
         - Use numeric columns as-is for axes, especially when analyzing correlations
         - If question implies correlation, use a seaborn.heatmap on a correlation matrix (df.corr())
+        - If the question involves days, months, or datetime grouping, always convert columns like df["Date"] using pd.to_datetime(df["Date"], errors="coerce")
         - If the question is about counts by category, group appropriately using groupby
         - Automatically select appropriate columns for x and y based on the question
         - Create the chart using this structure:
