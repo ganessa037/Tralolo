@@ -36,6 +36,7 @@ class AIActionInvoker:
                 filename=state.get_filename(),
                 cols=state.get_columns(),
                 explain_flag=explain_flag,
+                Visualisations
             )
         else: #SQL
             prompt = PromptTemplate.SQL_CODE_GENERATION.value.format(
@@ -43,6 +44,7 @@ class AIActionInvoker:
                 filename=state.get_filename(),
                 cols=state.get_columns(),
                 explain_flag=explain_flag,
+                Visualisations
         )
 
         try:
@@ -53,7 +55,8 @@ class AIActionInvoker:
                 mistral_review = AIActionInvoker.call_llm_mistral(
                     state.get_full_code(), 
                     state.get_columns_as_list(),
-                    language=language
+                    language=language,
+                    Visualisations
                 )
                 st.write("🔍 Mistral Review:", state.get_columns())
                 state.set_in_app_code(mistral_review)
@@ -83,6 +86,7 @@ class AIResponseFormatHandler:
         st.write("📎 Filename:", repr(state.get_filename()))
         #full = full.replace("data.csv", filename)
         st.write("📎 Filename:", repr(full))
+        Visualisations
         in_app = patch_missing_imports(in_app)
         in_app = re.sub(r'plt\s*\.\s*show\s*\(\s*\)', 'st.pyplot(plt.gcf())', in_app)
         in_app = re.sub(r'print\s*\((.*?)\)', r'st.write(\1)', in_app)
