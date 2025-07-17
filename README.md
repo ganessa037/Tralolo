@@ -1,54 +1,47 @@
-# Tralolo: AskMyData AI
+# MyQuery.AI - NLP to Code for Data Analysis
 
-Tralolo is an interactive Streamlit app that lets you upload your own CSV data and ask questions in plain English. It uses an Ollama-hosted LLM (like CodeLlama) to generate Python (pandas) code or SQL queries to answer your questions, and can even explain the code line-by-line.
+An AI-powered web tool that converts natural language questions into executable Python/SQL code for instant data analysis.
 
-## Features
-- **Upload CSV datasets** and preview them instantly
-- **Ask questions in English** about your data (e.g., "What is the average revenue by year?")
-- **AI-generated Python code** (standalone and in-app versions)
-- **Run generated code** directly in the app and see results
-- **Get code explanations** (line-by-line, beginner-friendly)
-- **AI-suggested questions** based on your dataset
-- **Educational mode** for more detailed, commented code
-- **Recent questions** history for quick access
+## What it does
+- Upload CSV datasets 
+- Ask questions in plain English (e.g., "Show me total sales by month")
+- Get AI-generated Python/SQL code
+- See results as tables or visualizations
+- Code explanations for learning
 
-## Requirements
-- Python 3.7+
-- [Streamlit](https://streamlit.io/)
-- pandas
-- requests
-- Ollama running locally with a supported LLM (e.g., CodeLlama)
+## Tech Stack
+- **Frontend**: Streamlit
+- **AI Models**: Groq (Llama3-70B), Mistral
+- **Data Processing**: Pandas, SQLite
+- **Visualization**: Matplotlib, Seaborn
 
-## Installation
-1. Clone this repository or copy `main.py` to your project folder.
-2. Install dependencies:
-   ```powershell
+## Quick Start
+1. **Install dependencies:**
+   ```bash
    pip install -r requirements.txt
    ```
-3. Download and run [Ollama](https://ollama.com/) locally, and pull a model (e.g., `codellama` or any other supported model):
-   ```powershell
-   ollama run codellama
-   ```
-   Or, to use a different model, replace `codellama` with your preferred model name (e.g., `ollama run llama3`).
-   Make sure Ollama is running at `http://localhost:11434` (default).
 
-## Usage
-1. Start the Streamlit app:
-   ```powershell
+2. **Set up API keys:**
+   - Get free API key from [Groq Console](https://console.groq.com/)
+   - Create `.env` file:
+     ```
+     GROQ_API_KEY=your_groq_api_key_here
+     ```
+
+3. **Run the app:**
+   ```bash
    streamlit run main.py
    ```
-2. Open the app in your browser (the terminal will show the local URL).
-3. Upload a CSV file, ask questions, and interact with the generated code and explanations.
 
-## Customization
-- You can change the LLM model by editing the `LLM_MODEL` variable in `main.py`.
-- The app can be extended to support SQL generation or other data sources.
+4. **Start analyzing:**
+   - Upload your CSV file
+   - Ask questions about your data
+   - Get instant code and results!
 
 ## Example Questions
-- "Show the top 5 products by sales."
-- "Plot the monthly trend of revenue."
-- "Which country has the highest average order value?"
+- "What's the average sales by category?"
+- "Show me a trend chart of monthly revenue"
+- "Which products have the highest profit margin?"
 
 ---
-
-*Built with ❤️ using Streamlit, pandas, and Ollama LLMs.*
+*Built with Streamlit & Groq LLMs*
