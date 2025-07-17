@@ -57,7 +57,7 @@ class PromptTemplate(Enum):
         Return only valid Python code with clear reasoning flow.
         """
 
-    SQL_CODE_GENERATION_SIMPLE = """ You are a SQL coding assistant. Think step-by-step:
+    SQL_CODE_GENERATION = """ You are a SQL coding assistant. Think step-by-step:
 
         STEP 1 - ANALYZE: What does "{question}" require? What columns from [{cols}] are needed? What's the best SQL approach for '{explain_flag}' level?
 
