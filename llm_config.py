@@ -57,12 +57,12 @@ def review_code_with_mistral(code: str, dataset_columns: list[str], language: st
             cols_str=cols_str,
             code=code
         )
-    else:
+    else: #SQL
         review_prompt = PromptTemplate.SQL_REVIEW_CODE.value.format(
             cols_str=cols_str,
             code=code
         )
-
+    
     try:
         response = llm_mistral.invoke(review_prompt)
         return clean_llm_output(response.content)
