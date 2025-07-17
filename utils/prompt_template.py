@@ -32,49 +32,54 @@ class PromptTemplate(Enum):
         {code}
     """
 
-    Python_CODE_GENERATION = """ You are a Python coding assistant. Return only valid Python code — no markdown, no explanations.
-        Write two code outputs:
-            1. # Standalone Code
-                - Write clean logic to answer: "{question}" using the file '{filename}' and columns [{cols}], with the attention to: '{explain_flag}'
-                - Use only common libraries: pandas, numpy, matplotlib, seaborn, sklearn, nltk
-                - Always assign the final output (e.g., result DataFrame, numeric value, or message string) to a variable named `result`
-                - If displaying a chart or message only, assign `result = "Chart displayed"` or similar
+    Python_CODE_GENERATION = """ You are a Python coding assistant. Think step-by-step:=
+        STEP 1 - ANALYZE: What does "{question}" require? What columns from [{cols}] are needed? What's the best approach for '{explain_flag}' level?
 
-            2. # In-App Version
-                - Same as above, but format as a full Streamlit script
-                - Use `st.pyplot()` instead of `plt.show()`
-                - Use 'st.write()' for any text output instead of 'print()'
-                - Do not include any markdown or comments, just valid Python code
-                - If using `word_tokenize` or `stopwords`, include:
-                    import nltk
-                    nltk.download('punkt')
-                    nltk.download('stopwords')
-                - Always assign something meaningful to `result`
-                - Always show the result in the app using `st.write(result)` or something similar
-                - The results should be presentable in the app
+        STEP 2 - PLAN: Choose methodology, required libraries (pandas, numpy, matplotlib, seaborn, sklearn, nltk), and output format.
+
+        STEP 3 - IMPLEMENT: Write two code outputs following your analysis:
+
+        1. # Standalone Code
+        - Answer: "{question}" using '{filename}' and columns [{cols}]
+        - Educational focus: '{explain_flag}'
+        - Use logical step-by-step approach
+        - Always assign final output to `result`
+        - If chart only: `result = "Chart displayed"`
+
+        2. # In-App Version
+        - Same logic as standalone but Streamlit-optimized
+        - Use `st.pyplot()` instead of `plt.show()`
+        - Use `st.write()` instead of `print()`
+        - For NLTK: include download commands
+        - Always show result with `st.write(result)`
+        - No markdown - just executable code
+
+        Return only valid Python code with clear reasoning flow.
         """
 
-    SQL_CODE_GENERATION = """
-            You are a SQL coding assistant. Your task is to generate only valid SQL code — do not include any markdown, explanations, or extra text.
-            You have to understand the "{question}" and the dataset columns: [{cols}] beforehand so you can come up with a SQL query that answers the question, with the attention to: '{explain_flag}'
-            Provide two separate outputs:
+    SQL_CODE_GENERATION_SIMPLE = """ You are a SQL coding assistant. Think step-by-step:
 
-            1. # Standalone SQL Query
-                - Write a clean, readable, and logically correct SQL query that answers the following question: "{question}"
-                - Use the table name: '{filename}'
-                - Use only the following columns: [{cols}]
-                - Ensure the query uses standard SQL syntax (compatible with DuckDB or PostgreSQL — avoid proprietary extensions unless explicitly needed)
-                - Assign the final SQL string to a Python variable named `result`, like so:
-                
-                result = \"\"\"SELECT ... FROM '{filename}' ...\"\"\"
+        STEP 1 - ANALYZE: What does "{question}" require? What columns from [{cols}] are needed? What's the best SQL approach for '{explain_flag}' level?
 
-            2. # In-App Version
-                - Same query logic as above, but intended for execution inside a Streamlit app using DuckDB
-                - Again, assign the SQL string to a variable named `result`
-                - Do not include markdown or any UI code — just valid SQL wrapped in a string
+        STEP 2 - PLAN: Choose SQL methodology (SELECT, GROUP BY, aggregation, filtering) and query structure for DuckDB compatibility.
 
-            Important:
-            - Do not wrap your output in markdown blocks or add any comments unless they are part of the SQL query.
-            - Do not include print statements, explanations, or variable outputs — only assign the SQL string to `result`.
-            - Always ensure the SQL query is executable directly using DuckDB, and references the exact table name '{filename}'.
+        STEP 3 - IMPLEMENT: Write two SQL outputs following your analysis:
+
+        1. # Standalone SQL Query
+        - Answer: "{question}" using table '{filename}' and columns [{cols}]
+        - Educational focus: '{explain_flag}'
+        - Standard SQL syntax (DuckDB/PostgreSQL compatible)
+        - Assign to: result = \"\"\"SELECT ... FROM '{filename}' ...\"\"\"
+
+        2. # In-App Version
+        - Same query logic for Streamlit app using DuckDB
+        - Assign SQL string to variable named `result`
+        - No UI code - just executable SQL wrapped in string
+
+        Important:
+        - No markdown blocks or explanations
+        - No print statements - only assign SQL string to `result`
+        - Ensure query references exact table name '{filename}'
+
+        Return only valid SQL code assignments with clear reasoning flow.
         """
