@@ -15,6 +15,19 @@ An AI-powered web tool that converts natural language questions into executable 
 - **Data Processing**: Pandas, SQLite
 - **Visualization**: Matplotlib, Seaborn
 
+## 📺 Demo Video
+
+[![Watch the demo](https://img.youtube.com/vi/SZSf2Ct9ivQ/0.jpg)](https://youtu.be/SZSf2Ct9ivQ)
+
+Click the thumbnail above to watch the demo on YouTube.
+
+## 🏗️ Architecture
+
+![App Architecture](assets/archictecture.png)
+
+This architecture diagram shows how MyQuery.AI processes your natural language questions into Python/SQL code using AI models.
+
+
 ## Quick Start
 1. **Install dependencies:**
    ```bash
