@@ -140,8 +140,6 @@ if state.get_df() is not None:
         """
 
 
-
-
         try:
             vis_code = llm_groq.invoke(vis_prompt).content
             if isinstance(vis_code, list):

@@ -36,15 +36,13 @@ class AIActionInvoker:
                 filename=state.get_filename(),
                 cols=state.get_columns(),
                 explain_flag=explain_flag,
-                Visualisations
             )
         else: #SQL
             prompt = PromptTemplate.SQL_CODE_GENERATION.value.format(
                 question=question,
                 filename=state.get_filename(),
                 cols=state.get_columns(),
-                explain_flag=explain_flag,
-                Visualisations  
+                explain_flag=explain_flag,  
         )
 
         try:
@@ -56,7 +54,6 @@ class AIActionInvoker:
                     state.get_full_code(), 
                     state.get_columns_as_list(),
                     language=language,
-                    Visualisations
                 )
                 st.write("🔍 Mistral Review:", state.get_columns())
                 state.set_in_app_code(mistral_review)
@@ -99,7 +96,6 @@ class AIResponseFormatHandler:
             st.warning("⚠️ No filename found in session state. Skipping filename replacement.")
 
         # Additional streamlit-specific patches
-        Visualisations
         in_app = patch_missing_imports(in_app)
         in_app = re.sub(r'plt\s*\.\s*show\s*\(\s*\)', 'st.pyplot(plt.gcf())', in_app)
         in_app = re.sub(r'print\s*\((.*?)\)', r'st.write(\1)', in_app)
@@ -123,4 +119,4 @@ class AIResponseFormatHandler:
     def join_lines(lines: list[str]) -> str:
 
         return "\n".join(lines)
-        Visualisations
+        
