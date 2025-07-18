@@ -11,8 +11,8 @@ An AI-powered web tool that converts natural language questions into executable 
 
 ## Tech Stack
 - **Frontend**: Streamlit
-- **AI Models**: Groq (Llama3-70B), Mistral
-- **Data Processing**: Pandas, SQLite
+- **AI Models**: Groq (Llama3-70B), Mistral-Medium
+- **Data Processing**: Pandas, duckDB
 - **Visualization**: Matplotlib, Seaborn
 
 ## 📺 Demo Video
@@ -35,10 +35,12 @@ This architecture diagram shows how MyQuery.AI processes your natural language q
    ```
 
 2. **Set up API keys:**
-   - Get free API key from [Groq Console](https://console.groq.com/)
-   - Create `.env` file:
+   - Get free API key from [Groq Console](https://console.groq.com/) and [Mistral](https://console.mistral.ai/build/agents)
+   - Create `.env` file, with the following variables:
      ```
-     GROQ_API_KEY=your_groq_api_key_here
+      GROQ_API_KEY= groq_key
+      MISTRAL_API_KEY= mistral_key
+      OPENAI_API_BASE = base_link
      ```
 
 3. **Run the app:**
