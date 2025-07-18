@@ -17,9 +17,8 @@ An AI-powered web tool that converts natural language questions into executable 
 
 ## 📺 Demo Video
 
-[![Watch the demo](https://img.youtube.com/vi/SZSf2Ct9ivQ/0.jpg)](https://youtu.be/dc4CWhvoRv8)
+[![Watch the demo](https://img.youtube.com/vi/dc4CWhvoRv8/0.jpg)](https://www.youtube.com/watch?v=dc4CWhvoRv8)
 
-Click the thumbnail above to watch the demo on YouTube.
 
 ## 🏗️ Architecture
 
