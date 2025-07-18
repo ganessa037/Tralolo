@@ -12,7 +12,7 @@ from utils.invokers import AIActionInvoker
 state = SessionState()
 
 # --- Page Setup ---
-st.set_page_config(page_title="Myquery AI", layout="wide")
+st.set_page_config(page_title="MyqueryAI", layout="wide")
 
 # --- Initialize session state, to save the states for rerun ---
 state.initialize()
