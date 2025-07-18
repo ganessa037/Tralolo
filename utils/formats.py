@@ -18,14 +18,19 @@ def strip_lines(text):
     cleaned = []
 
     for line in lines:
-        if not line.strip() or line.strip().startswith("```"):
+        stripped = line.strip()
+
+        if not stripped or stripped.startswith("```"):
             continue  # skip empty lines and code fences
 
-        # If the line starts with indentation (spaces or tabs), it's code — keep as-is
-        if line.startswith(" ") or line.startswith("\t"):
+        # Preserve indented lines or Python assignments
+        if (line.startswith(" ") or line.startswith("\t") or re.match(r"^\w+\s*=\s*", line)):
             cleaned.append(line.rstrip("\n"))
         else:
-            # Remove leading bullets/numbers if present
-            cleaned.append(re.sub(r"^[-–•\d\.\)\s]+", "", line))
+            # Preserve SQL comments or clauses
+            if stripped.startswith("--") or re.match(r"^(SELECT|FROM|WHERE|GROUP BY|ORDER BY|WITH|JOIN|HAVING|LIMIT|UNION|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER)\b", stripped, re.IGNORECASE):
+                cleaned.append(line.rstrip("\n"))
+            else:
+                continue  # skip narration or markdown
 
     return cleaned

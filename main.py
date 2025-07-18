@@ -168,7 +168,7 @@ if state.get_recent_questions() != []:
         cols[0].write(f"- {q}")
         if cols[1].button("❌", key=f"delete-{i}"):
             state.remove_recent_question(i)
-            st.experimental_rerun()
+            st.rerun()
 
 if llm_groq is None:
     st.error("🚫 AI functionality is not available. Please configure your API keys.")

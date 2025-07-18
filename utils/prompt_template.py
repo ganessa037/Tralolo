@@ -5,16 +5,18 @@ class PromptTemplate(Enum):
             Output only the questions in plain bullet points. Do not include any introductory or concluding sentence.
         """
 
-    Python_REVIEW_CODE = """You are a Python expert. Please review and revise the following code.
-        Your tasks:
-        1. Check for any syntax or logic errors.
-        2. Verify that the column names used match the actual dataset columns: [{cols_str}].
-        3. If any column names are incorrect or unclear, correct them using the provided column names.
-        4. Apply improvements based on Python and data analysis best practices.
-        5. Ensure the code is clean, professional, and safe to execute.
-        6. Do not explain — just return the revised, executable Python code.
-        7. Do not define a data loading function; use `df = df.copy()` directly to access the dataset.
-        8. Replace any `plt.show()` with `st.pyplot(plt.gcf())` for Streamlit compatibility if there's any.
+    Python_REVIEW_CODE = """You are a Python expert. Revise the following code.
+
+        Instructions:
+        1. Check for syntax or logic errors.
+        2. Verify that the column names match the dataset columns: [{cols_str}].
+        3. Correct any incorrect or unclear column names using the provided list.
+        4. Apply best practices for Python and data analysis.
+        5. Ensure the code is clean, safe to run, and uses professional formatting.
+        6. Do not include explanations — return only the revised Python code.
+        7. Do not define a data loading function; keep `df = df.copy()` as the starting point.
+        8. Replace `plt.show()` with `st.pyplot(plt.gcf())` if applicable.
+
         Code:
         {code}
     """
@@ -32,54 +34,94 @@ class PromptTemplate(Enum):
         {code}
     """
 
-    Python_CODE_GENERATION = """ You are a Python coding assistant. Think step-by-step:=
-        STEP 1 - ANALYZE: What does "{question}" require? What columns from [{cols}] are needed? What's the best approach for '{explain_flag}' level?
+    Python_CODE_GENERATION = """You are a Python coding assistant. Your task is to generate Python code to answer the following question:
+        - Question: "{question}"
+        - Dataset: '{filename}' with columns [{cols}]
+        - Educational focus: {explain_flag}
 
-        STEP 2 - PLAN: Choose methodology, required libraries (pandas, numpy, matplotlib, seaborn, sklearn, nltk), and output format.
+        Instructions:
 
-        STEP 3 - IMPLEMENT: Write two code outputs following your analysis:
+        Generate only one version of the code based on the educational focus — do not generate both.
 
-        1. # Standalone Code
-        - Answer: "{question}" using '{filename}' and columns [{cols}]
-        - Educational focus: '{explain_flag}'
-        - Use logical step-by-step approach
-        - Always assign final output to `result`
-        - If chart only: `result = "Chart displayed"`
+        - Always begin your response with: # Educational Level: {explain_flag}
 
-        2. # In-App Version
-        - Same logic as standalone but Streamlit-optimized
-        - Use `st.pyplot()` instead of `plt.show()`
-        - Use `st.write()` instead of `print()`
-        - For NLTK: include download commands
-        - Always show result with `st.write(result)`
-        - No markdown - just executable code
+        If the educational focus is "and add beginner-friendly comments":
+        - Write the code with clear Python comments explaining each step.
+        - Follow a 3-step reasoning structure:
+            # STEP 1 - ANALYZE
+            # STEP 2 - PLAN
+            # STEP 3 - IMPLEMENT
+        - Include inline comments to explain code logic.
+        - Use comments to guide beginners through the thought process.
 
-        Return only valid Python code with clear reasoning flow.
-        """
+        If the educational focus is "a knowledgeable audience":
+        - Write clean, professional code with **no comments** at all.
+        - Do not include any markdown, `# STEP` labels, or inline explanations.
+        - Just return executable Python code.
 
-    SQL_CODE_GENERATION = """ You are a SQL coding assistant. Think step-by-step:
+        Always:
+        - Use pandas, matplotlib, seaborn, sklearn, or nltk as needed.
+        - Start with: df = df.copy()
+        - Clean column names by stripping spaces: df.columns = df.columns.str.strip()
+        - If computing correlation:
+            - Convert datetime columns using:
+                df[col] = pd.to_datetime(df[col], errors='coerce').astype('int64')
+            - Detect and encode all non-numeric object columns dynamically:
+                object_cols = df.select_dtypes(include='object').columns
+                for col in object_cols:
+                    df[col] = pd.factorize(df[col])[0]
+            - Ensure all columns used in correlation or plotting are numeric
+        - Assign the final result to a variable called result.
+        - If chart-only, set: result = "Chart displayed".
 
-        STEP 1 - ANALYZE: What does "{question}" require? What columns from [{cols}] are needed? What's the best SQL approach for '{explain_flag}' level?
+        Then, provide an "In-App Version":
+        - Reuse the same logic already written above (no need to re-import, re-load, or re-process data).
+        - Replace only the output and display functions with Streamlit equivalents:
+            - st.write() instead of print()
+            - st.pyplot() instead of plt.show()
+            - nltk.download() if NLTK is used
+        - Do not repeat preprocessing or df loading.
+        - Always end with: st.write(result)
+        - Do not include markdown, comments, or explanation in this section
 
-        STEP 2 - PLAN: Choose SQL methodology (SELECT, GROUP BY, aggregation, filtering) and query structure for DuckDB compatibility.
+        Only return valid Python code. No explanations outside the code.
+    """
 
-        STEP 3 - IMPLEMENT: Write two SQL outputs following your analysis:
+    SQL_CODE_GENERATION = """
+        You are a SQL coding assistant. Your task is to generate SQL code to answer the following question:
 
-        1. # Standalone SQL Query
-        - Answer: "{question}" using table '{filename}' and columns [{cols}]
-        - Educational focus: '{explain_flag}'
-        - Standard SQL syntax (DuckDB/PostgreSQL compatible)
-        - Assign to: result = \"\"\"SELECT ... FROM '{filename}' ...\"\"\"
+        - Question: "{question}"
+        - Dataset: '{filename}' with columns [{cols}]
+        - Educational focus: {explain_flag}
 
-        2. # In-App Version
-        - Same query logic for Streamlit app using DuckDB
-        - Assign SQL string to variable named `result`
-        - No UI code - just executable SQL wrapped in string
+        Your response must include exactly two parts, in this order:
 
-        Important:
-        - No markdown blocks or explanations
-        - No print statements - only assign SQL string to `result`
-        - Ensure query references exact table name '{filename}'
+        1. Standalone SQL Query (with comments):
+        - Begin with: # Educational Level: {explain_flag}
+        - If the educational focus is "and add beginner-friendly comments":
+            - Output valid SQL starting at the SELECT clause
+            - Use only `--` comments to explain each major clause:
+                -- SELECT: explain each selected column
+                -- FROM: describe the data source
+                -- WHERE: explain filtering logic
+                -- GROUP BY: explain grouping logic
+                -- ORDER BY: explain sorting logic
+            - Do NOT include:
+                - Narration or explanation outside of comments
+                - Markdown, bullet points, or variable assignments
 
-        Return only valid SQL code assignments with clear reasoning flow.
-        """
+        - If the educational focus is "a knowledgeable audience":
+            - Output raw SQL only with no comments
+
+        2. Clean SQL (no comments):
+        - Repeat the same SQL logic without any comments
+        - Do not include:
+            - Any markdown
+            - Any variable assignments like result = ...
+            - Any explanation
+
+        General Rules:
+        - Use DuckDB/PostgreSQL-compatible SQL
+        - Reference the table exactly as '{filename}' (with .csv if present)
+        - Output only valid SQL — no markdown, no extra text, no narration
+    """

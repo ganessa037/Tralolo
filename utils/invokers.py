@@ -29,7 +29,7 @@ class AIActionInvoker:
 
     @staticmethod
     def generate_code(question:str, mode:str, language:str):
-        explain_flag = ("and add beginner-friendly comments" if mode.startswith("Explain") else "and keep it concise and professional.")
+        explain_flag = ("and add beginner-friendly comments" if mode.startswith("Explain") else "a knowledgeable audience")
         if language == "Python":
             prompt = PromptTemplate.Python_CODE_GENERATION.value.format(
                 question=question,
@@ -99,15 +99,32 @@ class AIResponseFormatHandler:
 
     @staticmethod
     def code_normalizer(res: str) -> str:
-        return re.sub(
-            r'^\*\*(In-App Version(?: \(Streamlit\))?|Standalone Code)\*\*',
-            lambda m: f"# {m.group(1)}",
+        # Replace "**Educational Focus: ...**" with "# Educational Focus: ..."
+        res = re.sub(
+            r'^\*\*(Educational Focus:.*?)\*\*',
+            r'# \1',
             res,
             flags=re.MULTILINE
         )
+
+        res = re.sub(
+            r'^(.*\bSQL\b.*)$',
+            r'# \1',
+            res,
+            flags=re.MULTILINE | re.IGNORECASE
+        )
+
+        # Replace any line containing "In-App" with "# In-App Version"
+        res = re.sub(
+            r'^.*In-App.*$',
+            '# In-App Version',
+            res,
+            flags=re.MULTILINE
+        )
+
+        return res
 
     @staticmethod
     def join_lines(lines: list[str]) -> str:
 
         return "\n".join(lines)
-        Visualisations
