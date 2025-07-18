@@ -45,7 +45,7 @@ def clean_llm_output(text: str) -> str:
     return "\n".join(filtered).strip()
 
 def ask_llm_groq(prompt: str) -> list[str]:
-    print(f"Groq LLM prompt: {prompt}")
+    # print(f"Groq LLM prompt: {prompt}")
     response = llm_groq.invoke(prompt)
     cleaned_text = clean_llm_output(response.content)
     return strip_lines(cleaned_text) 

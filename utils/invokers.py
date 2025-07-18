@@ -57,7 +57,7 @@ class AIActionInvoker:
                     
                 )
                 state.set_in_app_code(mistral_review)
-                print(state.get_in_app_code())
+                # print(state.get_in_app_code())
 
         except Exception as e:
             st.error(f"Code generation error: {e}")
