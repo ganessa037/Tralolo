@@ -56,7 +56,6 @@ class AIActionInvoker:
                     language=language
                     
                 )
-                st.write("🔍 Mistral Review:", state.get_columns())
                 state.set_in_app_code(mistral_review)
                 print(state.get_in_app_code())
 
@@ -83,14 +82,6 @@ class AIResponseFormatHandler:
         else:
             full = in_app = normalized.strip()
 
-
-        # ✅ Replacements
-        # the 2 st.write is just to debug
-        st.write("📎 Filename:", repr(state.get_filename()))
-        #full = full.replace("data.csv", filename)
-        st.write("📎 Filename:", repr(full))
-
-        # ✅ Safe Replacement
         if filename:
             full = full.replace("data.csv", filename)
         else:
@@ -102,7 +93,6 @@ class AIResponseFormatHandler:
         in_app = re.sub(r'print\s*\((.*?)\)', r'st.write(\1)', in_app)
         in_app = re.sub(r'@st\.cache\b', '@st.cache_data', in_app)
 
-        # ✅ Save to state
         state.set_full_code(full)
         state.set_in_app_code(in_app)
         state.set_explanation("")
